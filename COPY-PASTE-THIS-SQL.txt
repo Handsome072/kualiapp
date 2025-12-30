@@ -1,0 +1,50 @@
+-- ============================================================================
+-- COPIEZ-COLLEZ CE SQL DANS SUPABASE
+-- ============================================================================
+-- 
+-- 1. Ouvrez: https://supabase.com/dashboard/project/hvtsmovlsppvuncgvjvr/sql/new
+-- 2. Copiez TOUT ce fichier
+-- 3. Collez dans le SQL Editor
+-- 4. Cliquez sur "Run" (ou Ctrl+Enter)
+-- 5. Vérifiez que vous voyez "✅ CONFIRMÉ"
+-- 6. Testez la connexion sur http://localhost:3000/login
+--
+-- ============================================================================
+
+-- Confirmer l'utilisateur quali@gmail.com
+UPDATE auth.users
+SET email_confirmed_at = NOW()
+WHERE email = 'quali@gmail.com';
+
+-- Vérifier que ça a fonctionné
+SELECT 
+  email, 
+  email_confirmed_at,
+  CASE 
+    WHEN email_confirmed_at IS NULL THEN '❌ NON CONFIRMÉ'
+    ELSE '✅ CONFIRMÉ'
+  END as status
+FROM auth.users
+WHERE email = 'quali@gmail.com';
+
+-- ============================================================================
+-- RÉSULTAT ATTENDU:
+-- ============================================================================
+-- 
+-- UPDATE 1
+-- 
+-- email            | email_confirmed_at      | status
+-- -----------------|-------------------------|----------------
+-- quali@gmail.com  | 2024-12-29 XX:XX:XX+00  | ✅ CONFIRMÉ
+--
+-- ============================================================================
+-- PROCHAINE ÉTAPE:
+-- ============================================================================
+--
+-- Testez la connexion:
+-- - URL: http://localhost:3000/login
+-- - Email: quali@gmail.com
+-- - Password: 123456789
+--
+-- ============================================================================
+

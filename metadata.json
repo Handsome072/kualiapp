@@ -1,0 +1,12 @@
+{
+  "name": "QualiApps - Analyseur Qualiopi (Hardened)",
+  "description": "Plateforme d'audit sécurisée avec protection contre l'injection de prompt et isolation serveur.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "security_level": "Production-Critique",
+  "compliance": [
+    "Qualiopi",
+    "RGPD"
+  ]
+}

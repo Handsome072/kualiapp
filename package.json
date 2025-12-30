@@ -1,0 +1,30 @@
+{
+  "name": "qualiapps-cloud",
+  "version": "2.0.0",
+  "description": "QualiApps Cloud - Plateforme SaaS de gestion qualité et conformité Qualiopi",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.48.1",
+    "dompurify": "^3.2.4",
+    "lucide-react": "^0.462.0",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.0"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.2.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.2"
+  }
+}
