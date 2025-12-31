@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search, Bookmark, BookmarkCheck, ExternalLink,
   Scale, GraduationCap, Briefcase, Zap, AlertTriangle,
-  Info, Loader2, Sparkles, RefreshCw, Download, Bell,
-  Filter, ChevronLeft, ChevronRight, Settings, Rss
+  Info, Loader2, RefreshCw, Download, Bell,
+  ChevronLeft, ChevronRight, Rss
 } from 'lucide-react';
 import {
   VeilleItem, VeilleSource, VeilleFilters, VeilleStats, VeilleTheme, VeilleSeverity
@@ -65,64 +65,100 @@ export const VeillePage: React.FC = () => {
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
-  const [showSettings, setShowSettings] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  const user = getCurrentUser();
+  // Mémoïser l'utilisateur pour éviter les re-renders
+  const [user] = useState(() => getCurrentUser());
 
-  // Chargement des données
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [sourcesData, statsData] = await Promise.all([
-        veilleService.getSources(),
-        user ? veilleService.getStats(user.id) : Promise.resolve(null)
-      ]);
-      setSources(sourcesData);
-      setStats(statsData);
+  // Chargement initial des données (sources, stats, savedIds)
+  useEffect(() => {
+    let mounted = true;
 
-      if (user) {
-        const saved = await veilleService.getSavedItemIds(user.id);
-        setSavedIds(saved);
+    const loadInitialData = async () => {
+      if (!mounted) return;
+      setLoading(true);
+
+      try {
+        const [sourcesData, statsData] = await Promise.all([
+          veilleService.getSources(),
+          user ? veilleService.getStats(user.id) : Promise.resolve(null)
+        ]);
+
+        if (!mounted) return;
+        setSources(sourcesData);
+        setStats(statsData);
+
+        if (user) {
+          const saved = await veilleService.getSavedItemIds(user.id);
+          if (mounted) setSavedIds(saved);
+        }
+
+        if (mounted) setDataLoaded(true);
+      } catch (err) {
+        console.error('Erreur chargement veille:', err);
+      } finally {
+        if (mounted) setLoading(false);
       }
-    } catch (err) {
-      console.error('Erreur chargement veille:', err);
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    loadInitialData();
+    return () => { mounted = false; };
   }, [user]);
 
-  const loadItems = useCallback(async () => {
-    try {
-      const filters: VeilleFilters = {};
-      if (selectedTheme) filters.theme = selectedTheme;
-      if (selectedSource) filters.source_id = selectedSource;
+  // Chargement des items (séparé pour éviter la boucle)
+  useEffect(() => {
+    if (!dataLoaded) return;
 
-      const { items: data, total: count } = await veilleService.getItems(
-        filters,
-        ITEMS_PER_PAGE,
-        page * ITEMS_PER_PAGE
-      );
+    let mounted = true;
 
-      // Enrichir avec les infos de sauvegarde
-      const enriched = data.map(item => ({
-        ...item,
-        is_saved: savedIds.includes(item.id)
-      }));
+    const loadItems = async () => {
+      if (!mounted) return;
 
-      setItems(enriched);
-      setTotal(count);
-    } catch (err) {
-      console.error('Erreur chargement items:', err);
-    }
-  }, [selectedTheme, selectedSource, page, savedIds]);
+      try {
+        const filters: VeilleFilters = {};
+        if (selectedTheme) filters.theme = selectedTheme;
+        if (selectedSource) filters.source_id = selectedSource;
 
-  useEffect(() => { loadData(); }, [loadData]);
-  useEffect(() => { loadItems(); }, [loadItems]);
+        const { items: data, total: count } = await veilleService.getItems(
+          filters,
+          ITEMS_PER_PAGE,
+          page * ITEMS_PER_PAGE
+        );
+
+        if (!mounted) return;
+
+        // Enrichir avec les infos de sauvegarde
+        const enriched = data.map(item => ({
+          ...item,
+          is_saved: savedIds.includes(item.id)
+        }));
+
+        setItems(enriched);
+        setTotal(count);
+      } catch (err) {
+        console.error('Erreur chargement items:', err);
+      }
+    };
+
+    loadItems();
+    return () => { mounted = false; };
+  }, [dataLoaded, selectedTheme, selectedSource, page]); // Note: savedIds retiré pour éviter la boucle
+
+  // Mettre à jour is_saved quand savedIds change (sans recharger les items)
+  useEffect(() => {
+    setItems(prev => prev.map(item => ({
+      ...item,
+      is_saved: savedIds.includes(item.id)
+    })));
+  }, [savedIds]);
 
   // Actions
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      loadItems();
+      // Réinitialiser - forcer un rechargement en changeant la page
+      setPage(0);
+      setDataLoaded(false);
+      setTimeout(() => setDataLoaded(true), 0);
       return;
     }
     setIsSearching(true);
@@ -147,10 +183,7 @@ export const VeillePage: React.FC = () => {
         await veilleService.saveItem(user.id, itemId);
         setSavedIds(prev => [...prev, itemId]);
       }
-      // Mettre à jour l'état local des items
-      setItems(prev => prev.map(item =>
-        item.id === itemId ? { ...item, is_saved: !item.is_saved } : item
-      ));
+      // Mise à jour locale gérée par le useEffect sur savedIds
     } catch (err) {
       console.error('Erreur sauvegarde:', err);
     }
@@ -166,8 +199,32 @@ export const VeillePage: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    loadData();
-    loadItems();
+    // Forcer le rechargement complet
+    setDataLoaded(false);
+    setLoading(true);
+
+    // Recharger tout après un court délai
+    setTimeout(async () => {
+      try {
+        const [sourcesData, statsData] = await Promise.all([
+          veilleService.getSources(),
+          user ? veilleService.getStats(user.id) : Promise.resolve(null)
+        ]);
+        setSources(sourcesData);
+        setStats(statsData);
+
+        if (user) {
+          const saved = await veilleService.getSavedItemIds(user.id);
+          setSavedIds(saved);
+        }
+
+        setDataLoaded(true);
+      } catch (err) {
+        console.error('Erreur refresh veille:', err);
+      } finally {
+        setLoading(false);
+      }
+    }, 0);
   };
 
   // Filtrage des items sauvegardés

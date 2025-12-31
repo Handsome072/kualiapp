@@ -90,18 +90,36 @@ export async function getItems(
 
 export async function searchItems(
   query: string,
-  limit = 50,
-  offset = 0
+  limit = 50
 ): Promise<VeilleItem[]> {
-  const { data, error } = await supabase
-    .rpc('search_veille_items', {
-      p_query: query,
-      p_limit: limit,
-      p_offset: offset
-    });
+  // Use Algolia for full-text search
+  const { searchVeilleItems } = await import('./algoliaService');
 
-  if (error) throw new Error(error.message);
-  return data || [];
+  try {
+    const { items } = await searchVeilleItems(query, { limit });
+    return items;
+  } catch (error) {
+    console.error('Algolia search failed, falling back to Supabase:', error);
+
+    // Fallback to Supabase text search
+    const { data, error: dbError } = await supabase
+      .from('veille_items')
+      .select(`
+        *,
+        veille_sources(name, source_type)
+      `)
+      .or(`title.ilike.%${query}%,summary.ilike.%${query}%`)
+      .order('published_at', { ascending: false })
+      .limit(limit);
+
+    if (dbError) throw new Error(dbError.message);
+
+    return (data || []).map((item: any) => ({
+      ...item,
+      source_name: item.veille_sources?.name,
+      source_type: item.veille_sources?.source_type
+    }));
+  }
 }
 
 export async function getItemById(id: string): Promise<VeilleItem | null> {
