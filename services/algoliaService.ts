@@ -167,7 +167,7 @@ export async function indexVeilleItems(items: VeilleItem[]): Promise<{ indexed: 
   
   await client.saveObjects({
     indexName: ALGOLIA_INDEX_NAME,
-    objects: records,
+    objects: records as unknown as Record<string, unknown>[],
   });
   
   return { indexed: records.length };

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   ShieldCheck, LayoutDashboard,
   FileSearch, Settings, LogOut, Loader2, Zap
@@ -13,7 +14,6 @@ import { Dashboard } from '@/Dashboard';
 import { SettingsPage } from '@/SettingsPage';
 import { ReferencePage } from '@/ReferencePage';
 import { CompliancePage } from '@/CompliancePage';
-import { VeillePage } from '@/VeillePage';
 import { SetupWizard } from '@/SetupWizard';
 import { analyzeDocument } from '@/services/geminiService';
 import { db } from '@/services/db';
@@ -104,7 +104,7 @@ export default function DashboardPage() {
         <nav className="flex-1 space-y-2">
           <SidebarItem icon={<LayoutDashboard size={22} />} label="Dashboard" active={currentPage === 'dashboard'} onClick={() => setCurrentPage('dashboard')} />
           <SidebarItem icon={<FileSearch size={22} />} label="Analyseur IA" active={currentPage === 'reference'} onClick={() => setCurrentPage('reference')} />
-          <SidebarItem icon={<Zap size={22} />} label="Veille" active={currentPage === 'veille'} onClick={() => setCurrentPage('veille')} />
+          <SidebarLink href="/veille" icon={<Zap size={22} />} label="Veille" />
           <SidebarItem icon={<ShieldCheck size={22} />} label="Conformité" active={currentPage === 'compliance'} onClick={() => setCurrentPage('compliance')} />
           <SidebarItem icon={<Settings size={22} />} label="Paramètres" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
         </nav>
@@ -146,7 +146,6 @@ export default function DashboardPage() {
                 } finally { setIsAnalyzing(false); }
               }} />}
               {currentPage === 'compliance' && <CompliancePage />}
-              {currentPage === 'veille' && <VeillePage />}
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 gap-4 text-slate-400">
@@ -164,5 +163,11 @@ const SidebarItem: React.FC<{ icon: React.ReactNode; label: string; active?: boo
   <button onClick={onClick} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${active ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20 scale-105' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}>
     {icon}<span className="font-bold text-sm tracking-tight">{label}</span>
   </button>
+);
+
+const SidebarLink: React.FC<{ href: string; icon: React.ReactNode; label: string }> = ({ href, icon, label }) => (
+  <Link href={href} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+    {icon}<span className="font-bold text-sm tracking-tight">{label}</span>
+  </Link>
 );
 
